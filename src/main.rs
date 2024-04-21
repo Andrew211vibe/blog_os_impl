@@ -2,43 +2,84 @@
 #![no_main]
 #![feature(custom_test_frameworks)]
 #![test_runner(crate::test_runner)]
+#![reexport_test_harness_main = "test_main"]
 
 use core::panic::PanicInfo;
 
 mod vga_buffer;
+mod serial;
 
-#[cfg(test)]
-pub fn test_runner(tests: &[&dyn Fn()]) {
-    println!("Running {} tests", tests.len());
-    for test in tests {
-        test();
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[repr(u32)]
+pub enum QemuExitClose {
+    Success = 0x10,
+    Failed = 0x11,
+}
+
+pub fn exit_qemu(exit_code: QemuExitClose) {
+    use x86_64::instructions::port::Port;
+
+    unsafe {
+        let mut port = Port::new(0xf4);
+        port.write(exit_code as u32);
     }
 }
 
+pub trait Testable {
+    fn run(&self) -> ();
+}
+
+impl<T> Testable for T
+where
+    T: Fn()
+{
+    fn run(&self) -> () {
+        serial_print!("{}...\t", core::any::type_name::<T>());
+        self();
+        serial_println!("[ok]");
+    }
+}
+
+#[cfg(test)]
+pub fn test_runner(tests: &[&dyn Testable]) {
+    serial_println!("Running {} tests", tests.len());
+    for test in tests {
+        test.run();
+    }
+    exit_qemu(QemuExitClose::Success);
+}
+
 // This function will be called when `panic`
+#[cfg(not(test))]
 #[panic_handler]
-fn panic(_info: &PanicInfo) -> ! {
-    println!("{}", _info);
+fn panic(info: &PanicInfo) -> ! {
+    println!("{}", info);
     loop {}
 }
 
-static HELLO: &[u8] = b"Hello World!";
+// panic handler in test mode
+#[cfg(test)]
+#[panic_handler]
+fn panic(info: &PanicInfo) -> ! {
+    serial_println!("[failed]\n");
+    serial_println!("Error: {}\n", info);
+    exit_qemu(QemuExitClose::Failed);
+    loop {}
+}
 
 #[no_mangle]
 pub extern "C" fn _start() -> ! {
-//    let vga_buf = 0xb8000 as *mut u8;
-    
-//    for (i, &byte) in HELLO.iter().enumerate() {
-//        unsafe {
-//            *vga_buf.offset(i as isize * 2) = byte;
-//            *vga_buf.offset(i as isize * 2 + 1) = 0xb;
-//        }
-//    }
-//    vga_buffer::print_something();
-    // use core::fmt::Write;
-    // vga_buffer::WRITER.lock().write_str("Hello again").unwrap();
-    // write!(vga_buffer::WRITER.lock(), ", some numbers: {} {}", 42, 1.337).unwrap();
     println!("Hello World{}", "!");
 
+    #[cfg(test)]
+    test_main();
+
     loop {}
+}
+
+#[test_case]
+fn trivial_assertion() {
+    // serial_print!("trivial assertion... ");
+    assert_eq!(1, 1);
+    // serial_println!("[ok]");
 }
