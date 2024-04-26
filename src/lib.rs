@@ -10,6 +10,7 @@ use core::panic::PanicInfo;
 pub mod serial;
 pub mod vga_buffer;
 pub mod interrupts;
+pub mod gdt;
 
 pub trait Testable {
     fn run(&self) -> ();
@@ -31,13 +32,13 @@ pub fn test_runner(tests: &[&dyn Testable]) {
     for test in tests {
         test.run();
     }
-    exit_qemu(QemuExitClose::Success);
+    exit_qemu(QemuExitCode::Success);
 }
 
 pub fn test_panic_handler(info: &PanicInfo) -> ! {
     serial_println!("[failed]\n");
     serial_println!("Error: {}\n", info);
-    exit_qemu(QemuExitClose::Failed);
+    exit_qemu(QemuExitCode::Failed);
     loop {}
 }
 
@@ -58,12 +59,12 @@ fn panic(info: &PanicInfo) -> ! {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(u32)]
-pub enum QemuExitClose {
+pub enum QemuExitCode {
     Success = 0x10,
     Failed = 0x11,
 }
 
-pub fn exit_qemu(exit_code: QemuExitClose) {
+pub fn exit_qemu(exit_code: QemuExitCode) {
     use x86_64::instructions::port::Port;
 
     unsafe {
@@ -73,5 +74,6 @@ pub fn exit_qemu(exit_code: QemuExitClose) {
 }
 
 pub fn init() {
+    gdt::init();
     interrupts::init_idt();
 }
