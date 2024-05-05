@@ -6,6 +6,7 @@
 
 use core::panic::PanicInfo;
 use blog_os::println;
+use bootloader::{BootInfo, entry_point};
 
 // This function will be called when `panic`
 #[cfg(not(test))]
@@ -22,16 +23,29 @@ fn panic(info: &PanicInfo) -> ! {
     blog_os::test_panic_handler(info)
 }
 
-#[no_mangle]
-pub extern "C" fn _start() -> ! {
+entry_point!(kernel_main);
+fn kernel_main(_boot_info: &'static BootInfo) -> ! {
     println!("Hello World{}", "!");
 
     blog_os::init();
 
-    // loop {
-    //     use blog_os::print;
-    //     print!("-");
-    // }
+    // let ptr = 0xdeadbeaf as *mut u8;
+    // unsafe { *ptr = 42; }
+    
+    // let ptr = 0x20449a as *mut u8;
+
+    // // read from a code page
+    // unsafe { let _x = *ptr; }
+    // println!("read worked");
+
+    // // write to a code page
+    // unsafe { *ptr = 42; }
+    // println!("write worked");
+
+    use x86_64::registers::control::Cr3;
+
+    let (level_4_page_table, _) = Cr3::read();
+    println!("Level 4 page table at: {:?}", level_4_page_table.start_address());
     
     println!("It did not crash!");
     blog_os::hlt_loop();
