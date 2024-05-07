@@ -1,9 +1,8 @@
-use x86_64::{instructions::interrupts, structures::idt::{InterruptDescriptorTable, InterruptStackFrame, PageFaultErrorCode}};
+use x86_64::structures::idt::{InterruptDescriptorTable, InterruptStackFrame, PageFaultErrorCode};
 use crate::{hlt_loop, println};
 use lazy_static::lazy_static;
 use crate::gdt;
 use pic8259::ChainedPics;
-use spin;
 use crate::print;
 
 pub const PIC_1_OFFSET: u8 = 32;
