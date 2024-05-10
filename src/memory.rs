@@ -65,51 +65,6 @@ unsafe fn active_level_4_table(physical_memory_offset: VirtAddr)
     &mut *page_table_ptr // unsafe
 }
 
-// pub unsafe fn translate_addr(addr: VirtAddr, physical_memory_offset: VirtAddr)
-//     -> Option<PhysAddr>
-// {
-//     translate_addr_inner(addr, physical_memory_offset)
-// }
-
-// /// 由 `translate_addr`调用的私有函数。
-// ///
-// /// 这个函数是安全的，可以限制`unsafe`的范围，
-// /// 因为Rust将不安全函数的整个主体视为不安全块。
-// /// 这个函数只能通过`unsafe fn`从这个模块的外部到达。
-// fn translate_addr_inner(addr: VirtAddr, physical_memory_offset: VirtAddr)
-//     -> Option<PhysAddr>
-// {
-//     use x86_64::structures::paging::page_table::FrameError;
-//     use x86_64::registers::control::Cr3;
-
-//     // 从Cr3寄存器中读取活动的4级frame
-//     let (level_4_table_frame, _) = Cr3::read();
-
-//     let table_indexes = [
-//         addr.p4_index(), addr.p3_index(), addr.p2_index(), addr.p1_index(),
-//     ];
-//     let mut frame = level_4_table_frame;
-
-//     // 遍历多级页表
-//     for &index in &table_indexes {
-//         // 将框架转换为页表参考
-//         let virt = physical_memory_offset + frame.start_address().as_u64();
-//         let table_ptr: *const PageTable = virt.as_ptr();
-//         let table = unsafe { &*table_ptr };
-
-//         // 读取页表条目并更新`frame`
-//         let entry = &table[index];
-//         frame = match entry.frame() {
-//             Ok(frame) => frame,
-//             Err(FrameError::FrameNotPresent) => return None,
-//             Err(FrameError::HugeFrame) => panic!("huge pages not supported"),
-//         };
-//     }
-
-//     // 通过添加页面偏移量来计算物理地址
-//     Some(frame.start_address() + u64::from(addr.page_offset()))
-// }
-
 /// 初始化一个新的OffsetPageTable。
 ///
 /// 这个函数是不安全的，因为调用者必须保证完整的物理内存在
@@ -119,21 +74,3 @@ pub unsafe fn init(physical_memory_offset: VirtAddr) -> OffsetPageTable<'static>
     let level_4_table = active_level_4_table(physical_memory_offset);
     OffsetPageTable::new(level_4_table, physical_memory_offset)
 }
-
-// /// 为给定的页面创建一个实例映射到框架`0xb8000`
-// pub fn create_example_mapping(
-//     page: Page,
-//     mapper: &mut OffsetPageTable,
-//     frame_allocator: &mut impl FrameAllocator<Size4KiB>,
-// ) {
-//     use x86_64::structures::paging::PageTableFlags as Flags;
-
-//     let frame = PhysFrame::containing_address(PhysAddr::new(0xb8000));
-//     let flags = Flags::PRESENT | Flags::WRITABLE;
-
-//     let map_to_result = unsafe {
-//         // 这并不安全，只是为了测试
-//         mapper.map_to(page, frame, flags, frame_allocator)
-//     };
-//     map_to_result.expect("map_to failed").flush();
-// }

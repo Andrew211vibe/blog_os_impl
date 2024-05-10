@@ -60,7 +60,7 @@ fn kernel_main(boot_info: &'static BootInfo) -> ! {
     };
 
     // 映射未使用的页
-    let page = Page::containing_address(VirtAddr::new(0));
+    let page: Page = Page::containing_address(VirtAddr::new(0));
     // memory::create_example_mapping(page, &mut mapper, &mut frame_allocator);
 
     // 通过新的映射将字符串`New!`写道屏幕上
