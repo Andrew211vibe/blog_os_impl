@@ -7,9 +7,11 @@ use x86_64::{
     VirtAddr,
 };
 use linked_list_allocator::LockedHeap;
-use self::bump::BumpAllocator;
+use self::{bump::BumpAllocator, fixed_size_block::FixedSizeBlockAllocator, linked_list::LinkedListAllocator};
 
 pub mod bump;
+pub mod linked_list;
+pub mod fixed_size_block;
 
 pub const HEAP_START: usize = 0x_4444_4444_0000;
 pub const HEAP_SIZE: usize = 100 * 1024; // 100 KIB
@@ -28,7 +30,12 @@ unsafe impl GlobalAlloc for Dummy {
 #[global_allocator]
 // static ALLOCATOR: Dummy = Dummy;
 // static ALLOCATOR: LockedHeap = LockedHeap::empty();
-static ALLOCATOR: Locked<BumpAllocator> = Locked::new(BumpAllocator::new());
+// static ALLOCATOR: Locked<BumpAllocator> = Locked::new(BumpAllocator::new());
+// static ALLOCATOR: Locked<LinkedListAllocator> = 
+//     Locked::new(LinkedListAllocator::new());
+static ALLOCATOR: Locked<FixedSizeBlockAllocator> = 
+    Locked::new(FixedSizeBlockAllocator::new());
+
 
 pub fn init_heap(
     mapper: &mut impl Mapper<Size4KiB>,
