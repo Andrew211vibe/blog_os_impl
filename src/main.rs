@@ -7,7 +7,7 @@
 extern crate alloc;
 
 use core::panic::PanicInfo;
-use blog_os::println;
+use blog_os::{println, task::{simple_executor::SimpleExecutor, Task}};
 use bootloader::{BootInfo, entry_point};
 use x86_64::VirtAddr;
 use alloc::{boxed::Box, vec, vec::Vec, rc::Rc};
@@ -62,11 +62,24 @@ fn kernel_main(boot_info: &'static BootInfo) -> ! {
     core::mem::drop(reference_counted);
     println!("reference count is {} new", Rc::strong_count(&cloned_reference));
 
+    let mut executor = SimpleExecutor::new();
+    executor.spawn(Task::new(example_task()));
+    executor.run();
+
     #[cfg(test)]
     test_main();
     
     println!("It did not crash!");
     blog_os::hlt_loop();
+}
+
+async fn async_number() -> u32 {
+    42
+}
+
+async fn example_task() {
+    let number = async_number().await;
+    println!("async number: {}", number);
 }
 
 #[test_case]
